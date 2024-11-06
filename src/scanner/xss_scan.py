@@ -1,5 +1,4 @@
-from .base_scan import BaseScan 
-import re
+from .base_scan import BaseScan
 import requests
 from src.utils import check_xss
 
@@ -13,13 +12,13 @@ class XSSScan(BaseScan):
             self.vulnerabilities.extend(vulnerabilities)
 
             payloads = [
-                "<script>alert('XSS')</script>",         # Basic script alert
-                "\"><img src=x onerror=alert('XSS')>",  # Closing tag injection
-                "javascript:alert(1)",                  # JavaScript URI
-                "<svg/onload=alert(1)>",                # SVG tag-based XSS
-                "'';!--\"<XSS>=&{()}",                 # Obfuscated XSS payload
+                "<script>alert('XSS')</script>",
+                "\"><img src=x onerror=alert('XSS')>",
+                "javascript:alert(1)",
+                "<svg/onload=alert(1)>",
+                "'';!--\"<XSS>=&{()}"
             ]
-            
+
             for payload in payloads:
                 test_url = f"{self.url}?q={payload}"
                 test_response = requests.get(test_url)

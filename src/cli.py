@@ -88,22 +88,34 @@ def display_progress(message):
     print("\n")
 
 def display_report(scan_results):
+    if not isinstance(scan_results, dict):
+        print(Fore.RED + "Error: scan_results is not in the expected dictionary format.")
+        return
+
     print("\n" + Fore.CYAN + "SCAN REPORT")
-    print(Fore.CYAN + f"URL: {scan_results['url']}")
+    print(Fore.CYAN + f"URL: {scan_results.get('url', 'Unknown URL')}")
     print(Fore.CYAN + "----------------------------------------")
 
-    if not scan_results["vulnerabilities"]:
+    vulnerabilities = scan_results.get("vulnerabilities", [])
+    if not vulnerabilities:
         print(Fore.GREEN + "No vulnerabilities detected.")
         return
 
-    for vuln in scan_results["vulnerabilities"]:
-        severity = vuln["severity"].upper()
-        color = Fore.RED if severity == "HIGH" or severity == "CRITICAL" else Fore.YELLOW if severity == "MEDIUM" else Fore.GREEN
-        print(color + f"\nIssue: {vuln['issue']}")
-        print(Style.BRIGHT + color + f"Severity: {vuln['severity']}")
-        print(Fore.WHITE + f"Description: {vuln['description']}")
-        print(Fore.WHITE + f"Recommendation: {vuln['recommendation']}")
-        print(Fore.CYAN + "----------------------------------------")
+    for vuln in vulnerabilities:
+        if isinstance(vuln, dict):
+            severity = vuln.get("severity", "").upper()
+            color = (
+                Fore.RED if severity in ["HIGH", "CRITICAL"]
+                else Fore.YELLOW if severity == "MEDIUM"
+                else Fore.GREEN
+            )
+            print(color + f"\nIssue: {vuln.get('issue', 'Unknown Issue')}")
+            print(Style.BRIGHT + color + f"Severity: {severity}")
+            print(Fore.WHITE + f"Description: {vuln.get('description', 'No description provided.')}")
+            print(Fore.WHITE + f"Recommendation: {vuln.get('recommendation', 'No recommendation provided.')}")
+            print(Fore.CYAN + "----------------------------------------")
+        else:
+            print(Fore.RED + "Warning: Vulnerability data is not in the expected format.")
 
 def display_summary(scan_results):
     high_count = sum(1 for vuln in scan_results["vulnerabilities"] if vuln["severity"] == "high")
