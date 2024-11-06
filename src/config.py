@@ -1,2 +1,2 @@
-USER_AGENT = "VulnScraper/1.0"
+USER_AGENT = "scrypte/1.0"
 HEADERS = {"User-Agent": USER_AGENT}
