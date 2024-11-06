@@ -1,46 +1,81 @@
-import argparse
-from scanner import scan_website  
-from report import report_generator  
-
 import os
+from datetime import datetime
+from scanner import scan_website
+from report import report_generator
 
 def display_banner():
     banner = """
-                           _       
-                          | |      
- ___  ___ _ __ _   _ _ __ | |_ ___ 
-/ __|/ __| '__| | | | '_ \| __/ _ \
-\__ \ (__| |  | |_| | |_) | ||  __/
-|___/\___|_|   \__, | .__/ \__\___|
-                __/ | |            
-               |___/|_|            
- """
+ ░▒▓███████▓▒░░▒▓██████▓▒░░▒▓███████▓▒░░▒▓█▓▒░░▒▓█▓▒░▒▓███████▓▒░▒▓████████▓▒░▒▓████████▓▒░ 
+░▒▓█▓▒░      ░▒▓█▓▒░░▒▓█▓▒░▒▓█▓▒░░▒▓█▓▒░▒▓█▓▒░░▒▓█▓▒░▒▓█▓▒░░▒▓█▓▒░ ░▒▓█▓▒░   ░▒▓█▓▒░        
+░▒▓█▓▒░      ░▒▓█▓▒░      ░▒▓█▓▒░░▒▓█▓▒░▒▓█▓▒░░▒▓█▓▒░▒▓█▓▒░░▒▓█▓▒░ ░▒▓█▓▒░   ░▒▓█▓▒░        
+ ░▒▓██████▓▒░░▒▓█▓▒░      ░▒▓███████▓▒░ ░▒▓██████▓▒░░▒▓███████▓▒░  ░▒▓█▓▒░   ░▒▓██████▓▒░   
+       ░▒▓█▓▒░▒▓█▓▒░      ░▒▓█▓▒░░▒▓█▓▒░  ░▒▓█▓▒░   ░▒▓█▓▒░        ░▒▓█▓▒░   ░▒▓█▓▒░        
+       ░▒▓█▓▒░▒▓█▓▒░░▒▓█▓▒░▒▓█▓▒░░▒▓█▓▒░  ░▒▓█▓▒░   ░▒▓█▓▒░        ░▒▓█▓▒░   ░▒▓█▓▒░        
+░▒▓███████▓▒░ ░▒▓██████▓▒░░▒▓█▓▒░░▒▓█▓▒░  ░▒▓█▓▒░   ░▒▓█▓▒░        ░▒▓█▓▒░   ░▒▓████████▓▒░ 
+                                                                                                                                                    
+    """
     print(banner)
 
-def parse_arguments():
-    parser = argparse.ArgumentParser(description="SCRYPT3 - A powerful web vulnerability scanner")
-    parser.add_argument("url", type=str, help="URL of the website to scan")
-    parser.add_argument("--output", type=str, default="report.txt", help="Report file name")
-    parser.add_argument("--json", action="store_true", help="Output report as JSON")
-    parser.add_argument("--html", action="store_true", help="Output report as HTML")
-    parser.add_argument("--all", action="store_true", help="Run all scans")
-    parser.add_argument("--headers", action="store_true", help="Scan headers for vulnerabilities")
-    parser.add_argument("--xss", action="store_true", help="Check for potential XSS vulnerabilities")
-    parser.add_argument("--sql", action="store_true", help="Check for SQL injection vulnerabilities")
-    return parser.parse_args()
+def prompt_url():
+    url = input("Enter the URL you want to scan: ")
+    if not url.startswith(("http://", "https://")):
+        url = "https://" + url 
+    return url
+
+def prompt_scan_type():
+    print("\nChoose the type of scan to perform:")
+    print("1. General Header Scan")
+    print("2. XSS Vulnerability Scan")
+    print("3. SQL Injection Scan")
+    print("4. TLS/SSL Security Scan")
+    print("5. Run All Scans")
+    choice = input("\nSelect an option (1-5): ")
+    return choice
+
+def generate_report_filename(scan_type):
+    timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    return f"{timestamp}_{scan_type}.json"
+
+def create_reports_folder():
+    if not os.path.exists("reports"):
+        os.makedirs("reports")
+    else:
+        print("Reports folder exists. Overwriting existing reports...")
 
 def run():
     display_banner()
-    args = parse_arguments()
+    url = prompt_url()
+    scan_type = prompt_scan_type()
 
-    scan_results = scan_website(args.url, args)
+    scan_map = {
+        "1": "headers",
+        "2": "xss",
+        "3": "sql",
+        "4": "tls",
+        "5": "all"
+    }
 
-    if args.json:
-        report_generator.generate_json_report(scan_results, args.output)
-    elif args.html:
-        report_generator.generate_html_report(scan_results, args.output)
-    else:
-        report_generator.generate_text_report(scan_results, args.output)
+    if scan_type not in scan_map:
+        print("Invalid selection. Please choose a valid option.")
+        return
+
+    scan_choice = scan_map[scan_type]
+    filename = generate_report_filename(scan_choice)
+    create_reports_folder()  
+
+    args = type("Args", (object,), {
+        "url": url,
+        "all": scan_choice == "all",
+        "headers": scan_choice == "headers" or scan_choice == "all",
+        "xss": scan_choice == "xss" or scan_choice == "all",
+        "sql": scan_choice == "sql" or scan_choice == "all",
+        "tls": scan_choice == "tls" or scan_choice == "all"
+    })
+
+    scan_results = scan_website(url, args)
+
+    report_generator.generate_json_report(scan_results, os.path.join("reports", filename))
+    print(f"\nScan complete! Report saved as reports/{filename}")
 
 if __name__ == "__main__":
     run()
