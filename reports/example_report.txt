@@ -1,0 +1,4 @@
+Report for https://example.com
+Status Code: 200
+
+Vulnerabilities found:
