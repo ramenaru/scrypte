@@ -1,6 +1,10 @@
 import re
 import requests
 from urllib.parse import urlparse, parse_qs, urlencode
+import time
+import random
+import string
+import time
 
 def check_headers(headers):
     vulnerabilities = []
@@ -195,3 +199,100 @@ def check_payload_in_response(test_url, payload):
         })
 
     return vulnerabilities
+
+SQL_PAYLOADS = [
+    "' OR '1'='1",                                # Basic always-true statement
+    "' OR '1'='0",                                # Basic always-false statement
+    "'; --",                                      # Comment terminator
+    "' OR 1=1 --",                                # Bypassing with comment
+    "' OR sleep(5) --",                           # Time-based SQL injection
+    "' OR pg_sleep(5) --",                        # Time-based for PostgreSQL
+    "' OR BENCHMARK(1000000,MD5(1)) --",          # Time-based for MySQL
+    "' AND 1=0 UNION SELECT NULL,NULL --",        # Union injection
+    "' UNION SELECT username, password FROM users --" # Union injection
+]
+
+SQL_ERRORS = [
+    "You have an error in your SQL syntax",
+    "Warning: mysql_",
+    "Unclosed quotation mark after the character string",
+    "quoted string not properly terminated",
+    "Microsoft OLE DB Provider for SQL Server",
+    "ORA-01756",  
+    "PG::SyntaxError", 
+    "SQLite3::SQLException" 
+]
+
+def construct_url(base_url, query_params):
+    parsed_url = urlparse(base_url)
+    query_string = urlencode(query_params, doseq=True)
+    return f"{parsed_url.scheme}://{parsed_url.netloc}{parsed_url.path}?{query_string}"
+
+def generate_unique_marker():
+    return ''.join(random.choices(string.ascii_letters + string.digits, k=8))
+
+def check_error_based_injection(test_url):
+    response = requests.get(test_url)
+    for error in SQL_ERRORS:
+        if error in response.text:
+            return {
+                "issue": "SQL Injection vulnerability (Error-Based)",
+                "severity": "high",
+                "description": f"SQL error message detected: '{error}'",
+                "recommendation": "Use prepared statements or ORM to avoid SQL injection."
+            }
+    return None
+
+def check_boolean_based_injection(base_url, param, query_params, marker):
+    conditions = [
+        ("' AND '1'='1", "' AND '1'='0"),
+        ("' OR '1'='1", "' OR '1'='0"),
+        ("' AND 1=1", "' AND 1=0"),
+    ]
+
+    for true_cond, false_cond in conditions:
+        true_params = query_params.copy()
+        false_params = query_params.copy()
+        true_params[param] = f"{true_cond} -- {marker}"
+        false_params[param] = f"{false_cond} -- {marker}"
+
+        true_url = construct_url(base_url, true_params)
+        false_url = construct_url(base_url, false_params)
+
+        response_true = requests.get(true_url)
+        response_false = requests.get(false_url)
+
+        if response_true.text != response_false.text:
+            return {
+                "issue": "SQL Injection vulnerability (Boolean-Based)",
+                "severity": "high",
+                "description": f"Boolean-based SQL injection detected using parameter '{param}' with varied conditions.",
+                "recommendation": "Sanitize inputs, use prepared statements, or parameterized queries."
+            }
+    return None
+
+def check_time_based_injection(base_url, param, query_params):
+    time_payloads = [
+        "' OR sleep(5) --",
+        "' OR pg_sleep(5) --",
+        "' OR IF(1=1, sleep(5), 0) --",
+        "' OR BENCHMARK(1000000,MD5(1)) --"
+    ]
+
+    for payload in time_payloads:
+        test_params = query_params.copy()
+        test_params[param] = payload
+        test_url = construct_url(base_url, test_params)
+
+        start_time = time.time()
+        response = requests.get(test_url)
+        end_time = time.time()
+
+        if end_time - start_time >= 5:
+            return {
+                "issue": "SQL Injection vulnerability (Time-Based)",
+                "severity": "high",
+                "description": f"Time-based SQL injection detected using parameter '{param}' with payload '{payload}'.",
+                "recommendation": "Sanitize inputs, use prepared statements, or parameterized queries."
+            }
+    return None
