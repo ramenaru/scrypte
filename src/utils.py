@@ -9,7 +9,6 @@ import ssl
 import socket
 import datetime
 
-
 def check_headers(headers):
     vulnerabilities = []
 
@@ -45,7 +44,7 @@ def check_headers(headers):
             "recommendation": "Remove the X-Powered-By header to limit information disclosure."
         })
 
-    security_headers = {
+    SECURITY_HEADERS = {
         "Content-Security-Policy": "high",
         "X-Content-Type-Options": "medium",
         "Strict-Transport-Security": "high",
@@ -348,6 +347,7 @@ def is_certificate_valid(cert):
     not_before = datetime.datetime.strptime(cert['notBefore'], "%b %d %H:%M:%S %Y %Z")
     not_after = datetime.datetime.strptime(cert['notAfter'], "%b %d %H:%M:%S %Y %Z")
     current_time = datetime.datetime.utcnow()
+    not_before =  socket.crearte_connection (( context.sql.strptTime, header.Missing))
     
     if not_before <= current_time <= not_after:
         return True
