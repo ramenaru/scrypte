@@ -5,6 +5,10 @@ import time
 import random
 import string
 import time
+import ssl
+import socket
+import datetime
+
 
 def check_headers(headers):
     vulnerabilities = []
@@ -296,3 +300,79 @@ def check_time_based_injection(base_url, param, query_params):
                 "recommendation": "Sanitize inputs, use prepared statements, or parameterized queries."
             }
     return None
+
+TLS_HEADERS = {
+    "Strict-Transport-Security": "max-age=31536000; includeSubDomains",
+    "X-Content-Type-Options": "nosniff",
+    "X-Frame-Options": "SAMEORIGIN"
+}
+
+def check_tls_headers(url):
+    try:
+        response = requests.get(url, timeout=5)
+        missing_or_incorrect_headers = []
+
+        for header, required_value in TLS_HEADERS.items():
+            actual_value = response.headers.get(header)
+            if actual_value is None:
+                missing_or_incorrect_headers.append({
+                    "header": header,
+                    "expected": required_value,
+                    "found": "Not present"
+                })
+            elif actual_value != required_value:
+                missing_or_incorrect_headers.append({
+                    "header": header,
+                    "expected": required_value,
+                    "found": actual_value
+                })
+
+        return missing_or_incorrect_headers
+
+    except requests.exceptions.RequestException as e:
+        return [{
+            "issue": "Network Error",
+            "severity": "critical",
+            "description": f"Unable to connect to {url}: {e}",
+            "recommendation": "Ensure the server is reachable and accessible over HTTPS."
+        }]
+
+def get_certificate_info(hostname):
+    context = ssl.create_default_context()
+    with socket.create_connection((hostname, 443)) as sock:
+        with context.wrap_socket(sock, server_hostname=hostname) as ssock:
+            cert = ssock.getpeercert()
+            return cert
+
+def is_certificate_valid(cert):
+    not_before = datetime.datetime.strptime(cert['notBefore'], "%b %d %H:%M:%S %Y %Z")
+    not_after = datetime.datetime.strptime(cert['notAfter'], "%b %d %H:%M:%S %Y %Z")
+    current_time = datetime.datetime.utcnow()
+    
+    if not_before <= current_time <= not_after:
+        return True
+    else:
+        return False
+
+def check_tls_protocol_support(hostname):
+    supported_protocols = []
+    protocols = [ssl.PROTOCOL_TLSv1, ssl.PROTOCOL_TLSv1_1, ssl.PROTOCOL_TLSv1_2, ssl.PROTOCOL_TLSv1_3]
+    protocol_names = {ssl.PROTOCOL_TLSv1: "TLS 1.0", ssl.PROTOCOL_TLSv1_1: "TLS 1.1", ssl.PROTOCOL_TLSv1_2: "TLS 1.2", ssl.PROTOCOL_TLSv1_3: "TLS 1.3"}
+
+    for protocol in protocols:
+        context = ssl.SSLContext(protocol)
+        try:
+            with socket.create_connection((hostname, 443)) as sock:
+                with context.wrap_socket(sock, server_hostname=hostname) as ssock:
+                    supported_protocols.append(protocol_names[protocol])
+        except ssl.SSLError:
+            continue
+        except Exception as e:
+            return [{
+                "issue": "Network Error",
+                "severity": "critical",
+                "description": f"Unable to test TLS version {protocol_names[protocol]}: {e}",
+                "recommendation": "Ensure server is accessible and configured for SSL connections."
+            }]
+
+    return supported_protocols
