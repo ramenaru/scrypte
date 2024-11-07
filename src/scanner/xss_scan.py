@@ -1,34 +1,17 @@
 from .base_scan import BaseScan
 import requests
-from src.utils import check_xss
+from src.utils import check_xss, test_reflected_xss
 
 class XSSScan(BaseScan):
     def run(self):
         try:
             response = requests.get(self.url)
             html_content = response.text
-
             vulnerabilities = check_xss(html_content)
             self.vulnerabilities.extend(vulnerabilities)
 
-            payloads = [
-                "<script>alert('XSS')</script>",
-                "\"><img src=x onerror=alert('XSS')>",
-                "javascript:alert(1)",
-                "<svg/onload=alert(1)>",
-                "'';!--\"<XSS>=&{()}"
-            ]
-
-            for payload in payloads:
-                test_url = f"{self.url}?q={payload}"
-                test_response = requests.get(test_url)
-                if payload in test_response.text:
-                    self.vulnerabilities.append({
-                        "issue": "Reflected XSS vulnerability",
-                        "severity": "high",
-                        "description": f"Reflected XSS payload '{payload}' found in response.",
-                        "recommendation": "Sanitize and encode all user inputs."
-                    })
+            reflected_vulnerabilities = test_reflected_xss(self.url)
+            self.vulnerabilities.extend(reflected_vulnerabilities)
 
         except requests.exceptions.RequestException as e:
             self.vulnerabilities.append({

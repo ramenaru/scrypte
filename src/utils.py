@@ -1,4 +1,6 @@
 import re
+import requests
+from urllib.parse import urlparse, parse_qs, urlencode
 
 def check_headers(headers):
     vulnerabilities = []
@@ -65,20 +67,26 @@ def check_headers(headers):
 
 def check_xss(html_content):
     vulnerabilities = []
-
+    
     xss_patterns = [
-        r"<script.*?>.*?</script>",
-        r"<img\s+.*?src=['\"]?javascript:",
-        r"on\w+\s*=",
-        r"<iframe.*?>",
-        r"<object.*?>",
-        r"style\s*=\s*['\"].*expression\(.*?\)",
-        r"document\.cookie",
-        r"window\.",
-        r"eval\(",
-        r"javascript\s*:",
-        r"<.*?srcdoc=['\"].*?</.*?>",
-        r"&#[xX]?[0-9A-Fa-f]+;"
+        r"<script.*?>.*?</script>",                 
+        r"<img\s+.*?src=['\"]?javascript:",           # JavaScript in image src
+        r"on\w+\s*=",                                 # Inline event handlers
+        r"<iframe.*?>",                               # Inline iframes
+        r"<object.*?>",                               # Inline objects
+        r"style\s*=\s*['\"].*expression\(.*?\)",      # CSS expressions
+        r"document\.cookie",                          # Accessing cookies
+        r"window\.",                                  # Accessing window properties
+        r"eval\(",                                    # JavaScript eval function
+        r"javascript\s*:",                            # JavaScript URIs
+        r"<.*?srcdoc=['\"].*?</.*?>",                 # Potential XSS in srcdoc attribute
+        r"<svg.*?onload=",                            # SVG tag with onload
+        r"document\.write\(",                         # document.write usage
+        r"innerHTML\s*=",                             # Potential for DOM-based XSS
+        r"<body.*?onload=",                           # body tag with onload event
+        r"<input.*?onfocus=",                         # input tag with event
+        r"<link.*?href=['\"]?javascript:",            # JavaScript in href of <link>
+        r"\bonerror\b",                               # Inline onerror event
     ]
 
     for pattern in xss_patterns:
@@ -86,21 +94,94 @@ def check_xss(html_content):
             vulnerabilities.append({
                 "issue": "Potential XSS vulnerability detected",
                 "severity": "high",
-                "description": f"Detected pattern '{pattern}' which could be a potential XSS vulnerability.",
-                "recommendation": "Sanitize and validate all inputs and consider using CSP to prevent XSS attacks."
+                "description": f"Pattern '{pattern}' suggests a possible XSS vulnerability.",
+                "recommendation": "Sanitize inputs, validate all data, and apply CSP."
             })
 
-    inline_event_handlers = [
-        "onerror", "onload", "onclick", "onmouseover", "onfocus", "onblur"
+    dom_patterns = [
+        r"document\.write\(",
+        r"innerHTML\s*=",
+        r"eval\(", 
+        r"setTimeout\(",
+        r"setInterval\(",
     ]
-    for event in inline_event_handlers:
-        event_pattern = rf"{event}\s*="
-        if re.search(event_pattern, html_content, re.IGNORECASE):
+    for pattern in dom_patterns:
+        if re.search(pattern, html_content, re.IGNORECASE):
             vulnerabilities.append({
-                "issue": f"Potential XSS vulnerability via inline event handler '{event}'",
+                "issue": "Potential DOM-based XSS vulnerability",
                 "severity": "medium",
-                "description": f"The '{event}' inline event handler could allow XSS attacks.",
-                "recommendation": "Avoid using inline event handlers or ensure proper input validation."
+                "description": f"Detected use of '{pattern}', which can enable DOM-based XSS.",
+                "recommendation": "Avoid unsafe JavaScript methods; use safer alternatives like textContent."
             })
+
+    return vulnerabilities
+
+def test_reflected_xss(url):
+    vulnerabilities = []
+    
+    payloads = [
+        "<script>alert('XSS')</script>",
+        "\"><img src=x onerror=alert('XSS')>",
+        "javascript:alert(1)",
+        "<svg/onload=alert(1)>",
+        "'';!--\"<XSS>=&{()}",
+        "<img src=x onerror='alert(String.fromCharCode(88,83,83))'>",
+        "<body onload=alert('XSS')>",
+        "<iframe src='javascript:alert(\"XSS\")'></iframe>",
+        "<object data='javascript:alert(\"XSS\")'></object>",
+        "<a href='javascript:alert(1)'>Click me</a>",
+        "%3Cscript%3Ealert(%27XSS%27)%3C/script%3E" 
+    ]
+
+    parsed_url = urlparse(url)
+    query_params = parse_qs(parsed_url.query)
+
+    for param in query_params:
+        for payload in payloads:
+            test_params = query_params.copy()
+            test_params[param] = payload
+            test_query = urlencode(test_params, doseq=True)
+            test_url = f"{parsed_url.scheme}://{parsed_url.netloc}{parsed_url.path}?{test_query}"
+            vulnerabilities.extend(check_payload_in_response(test_url, payload))
+
+            encoded_payload = urlencode({param: payload})
+            encoded_test_url = f"{parsed_url.scheme}://{parsed_url.netloc}{parsed_url.path}?{encoded_payload}"
+            vulnerabilities.extend(check_payload_in_response(encoded_test_url, payload))
+
+    return vulnerabilities
+
+def check_payload_in_response(test_url, payload):
+    vulnerabilities = []
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:92.0) Gecko/20100101 Firefox/92.0",
+        "Accept-Language": "en-US,en;q=0.5"
+    }
+    try:
+        test_response = requests.get(test_url, headers=headers, timeout=5)
+        
+        if payload in test_response.text:
+            vulnerabilities.append({
+                "issue": "Reflected XSS vulnerability",
+                "severity": "high",
+                "description": f"Reflected XSS payload '{payload}' detected in response.",
+                "recommendation": "Sanitize and encode all user inputs to prevent XSS."
+            })
+        
+        encoded_payload = payload.replace("<", "&lt;").replace(">", "&gt;")
+        if encoded_payload in test_response.text:
+            vulnerabilities.append({
+                "issue": "Possible XSS via encoded reflection",
+                "severity": "medium",
+                "description": f"Encoded payload '{encoded_payload}' was reflected, indicating weak sanitization.",
+                "recommendation": "Ensure all user inputs are fully sanitized and properly encoded."
+            })
+
+    except requests.exceptions.RequestException as e:
+        vulnerabilities.append({
+            "issue": "Network error during XSS testing",
+            "severity": "critical",
+            "description": f"Error accessing {test_url}: {e}",
+            "recommendation": "Ensure network stability and URL accessibility during testing."
+        })
 
     return vulnerabilities
