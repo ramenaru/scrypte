@@ -17,7 +17,7 @@ def display_animated_banner():
     ███████║╚██████╗██║  ██║   ██║   ██║        ██║   ███████╗
     ╚══════╝ ╚═════╝╚═╝  ╚═╝   ╚═╝   ╚═╝        ╚═╝   ╚══════╝                                              
 
-    Version 1.0 by ramenaru
+    Version 1.0.0 by ramenaru
     """
     for line in banner_text.splitlines():
         print(Fore.CYAN + line)
