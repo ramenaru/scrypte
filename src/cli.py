@@ -22,13 +22,13 @@ def display_animated_banner():
     for line in banner_text.splitlines():
         print(Fore.CYAN + line)
         time.sleep(0.04)
-    print("\n" + Fore.YELLOW + "Welcome to scrypte - Your comprehensive web vulnerability scanner!")
-    time.sleep(1)
+    print(Fore.YELLOW + "\n✨ Welcome to Scrypte! Your Web Vulnerability Scanner ✨\n")
+    time.sleep(0.5)
 
 def display_credits():
     credits = """
-Follow ramenaru on GitHub for more projects!
-GitHub: https://github.com/ramenaru      
+🌟 Follow ramenaru on GitHub for more projects!
+GitHub: https://github.com/ramenaru
     """
     print(Fore.GREEN + credits)
 
@@ -40,32 +40,39 @@ def validate_url(url):
         return False
 
 def prompt_url():
-    url = input(Fore.MAGENTA + "\nEnter the URL you want to scan: ")
-    
-    if not url.startswith(("http://", "https://")):
-        url = "https://" + url
-    
-    if "ramenaru.me" in url:
-        print(Fore.GREEN + f"\nSpecial URL detected: {url}")
-    elif validate_url(url):
-        print(Fore.CYAN + f"\nURL entered: {url}")
-    else:
-        print(Fore.RED + "Invalid URL format. Please enter a valid URL starting with http:// or https://.")
-        return prompt_url()
-    
-    return url
+    while True:
+        url = input(Fore.MAGENTA + "\n🔍 Enter the URL to scan (or type 'exit' to quit): ")
+        
+        if url.lower() == 'exit':
+            print(Fore.RED + "Exiting the application. Goodbye!")
+            exit()
+
+        if not url.startswith(("http://", "https://")):
+            url = "https://" + url
+        
+        if "ramenaru.me" in url:
+            print(Fore.GREEN + f"🌟 Special URL detected: {url}")
+            return url
+        elif validate_url(url):
+            print(Fore.CYAN + f"✅ Valid URL entered: {url}")
+            return url
+        else:
+            print(Fore.RED + "❌ Invalid URL format. Please enter a valid URL starting with http:// or https://.")
 
 def prompt_scan_type():
-    print(Fore.MAGENTA + "\nChoose the type of scan to perform:")
-    print("1. General Header Scan")
-    print("2. XSS Vulnerability Scan")
-    print("3. SQL Injection Scan")
-    print("4. TLS/SSL Security Scan")
-    print("5. Run All Scans")
-    choice = input(Fore.MAGENTA + "\nSelect an option (1-5): ")
+    menu_text = f"""{Fore.MAGENTA}
+🌐 Choose the type of scan to perform:
+    {Fore.YELLOW}1. General Header Scan
+    2. XSS Vulnerability Scan
+    3. SQL Injection Scan
+    4. TLS/SSL Security Scan
+    5. Run All Scans
+"""
+    print(menu_text)
+    choice = input(Fore.MAGENTA + "Select an option (1-5): ")
 
     if choice not in ["1", "2", "3", "4", "5"]:
-        print(Fore.RED + "Invalid selection. Please choose a valid option (1-5).")
+        print(Fore.RED + "❌ Invalid selection. Please choose a valid option (1-5).")
         return prompt_scan_type()
     return choice
 
@@ -76,56 +83,56 @@ def generate_report_filename(scan_type):
 def create_reports_folder():
     if not os.path.exists("reports"):
         os.makedirs("reports")
-        print(Fore.GREEN + "Reports folder created.")
+        print(Fore.GREEN + "📂 Reports folder created.")
     else:
-        print(Fore.YELLOW + "Reports folder exists. Overwriting existing reports...")
+        print(Fore.YELLOW + "📁 Reports folder exists. Saving new report...")
 
 def display_progress(message):
-    print(Fore.CYAN + message, end="", flush=True)
+    print(Fore.CYAN + f"{message} ", end="")
     for _ in range(3):
-        time.sleep(0.5)
+        time.sleep(0.4)
         print(Fore.CYAN + ".", end="", flush=True)
     print("\n")
 
 def display_report(scan_results):
+    print("\n" + Fore.CYAN + "🔍 SCAN REPORT")
+    print(Fore.CYAN + "----------------------------------------")
+
     if not isinstance(scan_results, dict):
         print(Fore.RED + "Error: scan_results is not in the expected dictionary format.")
         return
 
-    print("\n" + Fore.CYAN + "SCAN REPORT")
-    print(Fore.CYAN + f"URL: {scan_results.get('url', 'Unknown URL')}")
-    print(Fore.CYAN + "----------------------------------------")
-
     vulnerabilities = scan_results.get("vulnerabilities", [])
     if not vulnerabilities:
-        print(Fore.GREEN + "No vulnerabilities detected.")
+        print(Fore.GREEN + "🎉 No vulnerabilities detected! Your site seems secure.")
         return
 
     for vuln in vulnerabilities:
-        if isinstance(vuln, dict):
-            severity = vuln.get("severity", "").upper()
-            color = (
-                Fore.RED if severity in ["HIGH", "CRITICAL"]
-                else Fore.YELLOW if severity == "MEDIUM"
-                else Fore.GREEN
-            )
-            print(color + f"\nIssue: {vuln.get('issue', 'Unknown Issue')}")
-            print(Style.BRIGHT + color + f"Severity: {severity}")
-            print(Fore.WHITE + f"Description: {vuln.get('description', 'No description provided.')}")
-            print(Fore.WHITE + f"Recommendation: {vuln.get('recommendation', 'No recommendation provided.')}")
-            print(Fore.CYAN + "----------------------------------------")
-        else:
-            print(Fore.RED + "Warning: Vulnerability data is not in the expected format.")
+        severity = vuln.get("severity", "").upper()
+        color = (
+            Fore.RED if severity in ["HIGH", "CRITICAL"]
+            else Fore.YELLOW if severity == "MEDIUM"
+            else Fore.GREEN
+        )
+        print(color + f"\n⚠️  Issue: {vuln.get('issue', 'Unknown Issue')}")
+        print(Style.BRIGHT + color + f"🔴 Severity: {severity}")
+        print(Fore.WHITE + f"🔎 Description: {vuln.get('description', 'No description provided.')}")
+        print(Fore.WHITE + f"💡 Recommendation: {vuln.get('recommendation', 'No recommendation provided.')}")
+        print(Fore.CYAN + "----------------------------------------")
 
 def display_summary(scan_results):
+    if not scan_results or "vulnerabilities" not in scan_results:
+        print(Fore.RED + "No summary available. Check for issues in the scan process.")
+        return
+
     high_count = sum(1 for vuln in scan_results["vulnerabilities"] if vuln["severity"] == "high")
     medium_count = sum(1 for vuln in scan_results["vulnerabilities"] if vuln["severity"] == "medium")
     low_count = sum(1 for vuln in scan_results["vulnerabilities"] if vuln["severity"] == "low")
 
-    print(Fore.CYAN + "\nSUMMARY OF SCAN")
-    print(Fore.RED + f"High Severity Issues: {high_count}")
-    print(Fore.YELLOW + f"Medium Severity Issues: {medium_count}")
-    print(Fore.GREEN + f"Low Severity Issues: {low_count}")
+    print(Fore.CYAN + "\n📊 SUMMARY OF SCAN")
+    print(Fore.RED + f"🔴 High Severity Issues: {high_count}")
+    print(Fore.YELLOW + f"🟡 Medium Severity Issues: {medium_count}")
+    print(Fore.GREEN + f"🟢 Low Severity Issues: {low_count}")
     print(Fore.CYAN + "----------------------------------------")
 
 def run():
@@ -155,12 +162,12 @@ def run():
             "tls": scan_choice == "tls" or scan_choice == "all"
         })
 
-        display_progress("Scanning in progress")
+        display_progress("🔄 Scanning in progress")
         scan_results = scan_website(url, args)
 
         display_report(scan_results)
         report_generator.generate_json_report(scan_results, os.path.join("reports", filename))
-        print(Fore.GREEN + f"\nScan complete! Report saved as reports/{filename}")
+        print(Fore.GREEN + f"\n✅ Scan complete! Report saved as reports/{filename}")
 
         display_summary(scan_results)
         display_credits()
