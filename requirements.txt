@@ -3,3 +3,4 @@ requests
 colorama
 urljoin
 urllib3
+pyinstaller # command -> pyinstaller main.spec
