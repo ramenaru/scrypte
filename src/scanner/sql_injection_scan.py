@@ -1,10 +1,14 @@
 from .base_scan import BaseScan
 from src.utils import (
-    SQL_PAYLOADS, check_error_based_injection, 
-    check_boolean_based_injection, check_time_based_injection, 
-    construct_url, generate_unique_marker
+    SQL_PAYLOADS,
+    check_error_based_injection,
+    check_boolean_based_injection,
+    check_time_based_injection,
+    construct_url,
+    generate_unique_marker,
 )
 from urllib.parse import urlparse, parse_qs
+
 
 class SQLInjectionScan(BaseScan):
     def __init__(self, url):
@@ -27,12 +31,16 @@ class SQLInjectionScan(BaseScan):
                     self.vulnerabilities.append(error_based_result)
                     continue
 
-                boolean_based_result = check_boolean_based_injection(self.url, param, query_params, marker)
+                boolean_based_result = check_boolean_based_injection(
+                    self.url, param, query_params, marker
+                )
                 if boolean_based_result:
                     self.vulnerabilities.append(boolean_based_result)
                     continue
 
-                time_based_result = check_time_based_injection(self.url, param, query_params)
+                time_based_result = check_time_based_injection(
+                    self.url, param, query_params
+                )
                 if time_based_result:
                     self.vulnerabilities.append(time_based_result)
                     continue

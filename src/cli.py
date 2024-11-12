@@ -8,6 +8,7 @@ from report import report_generator
 
 init(autoreset=True)
 
+
 def display_animated_banner():
     banner_text = """
     ███████╗ ██████╗██████╗ ██╗   ██╗██████╗ ████████╗███████╗
@@ -25,12 +26,14 @@ def display_animated_banner():
     print(Fore.YELLOW + "\n✨ Welcome to scrypte! Your Web Vulnerability Scanner ✨\n")
     time.sleep(0.5)
 
+
 def display_credits():
     credits = """
 🌟 Follow ramenaru on GitHub for more projects!
 https://github.com/ramenaru
     """
     print(Fore.GREEN + credits)
+
 
 def validate_url(url):
     try:
@@ -39,17 +42,20 @@ def validate_url(url):
     except ValueError:
         return False
 
+
 def prompt_url():
     while True:
-        url = input(Fore.MAGENTA + "\n🔍 Enter the URL to scan (or type 'exit' to quit): ")
-        
-        if url.lower() == 'exit':
+        url = input(
+            Fore.MAGENTA + "\n🔍 Enter the URL to scan (or type 'exit' to quit): "
+        )
+
+        if url.lower() == "exit":
             print(Fore.RED + "Exiting the application. Goodbye!")
             exit()
 
         if not url.startswith(("http://", "https://")):
             url = "https://" + url
-        
+
         if "ramenaru.me" in url:
             print(Fore.GREEN + f"🌟 Special URL detected: {url}")
             return url
@@ -57,7 +63,11 @@ def prompt_url():
             print(Fore.CYAN + f"✅ Valid URL entered: {url}")
             return url
         else:
-            print(Fore.RED + "❌ Invalid URL format. Please enter a valid URL starting with http:// or https://.")
+            print(
+                Fore.RED
+                + "❌ Invalid URL format. Please enter a valid URL starting with http:// or https://."
+            )
+
 
 def prompt_scan_type():
     menu_text = f"""{Fore.MAGENTA}
@@ -82,12 +92,14 @@ def generate_report_filename(scan_type):
     timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     return f"{timestamp}_{scan_type}.json"
 
+
 def create_reports_folder():
     if not os.path.exists("reports"):
         os.makedirs("reports")
         print(Fore.GREEN + "📂 Reports folder created.")
     else:
         print(Fore.YELLOW + "📁 Reports folder exists. Saving new report...")
+
 
 def display_progress(message):
     print(Fore.CYAN + f"{message} ", end="")
@@ -96,12 +108,15 @@ def display_progress(message):
         print(Fore.CYAN + ".", end="", flush=True)
     print("\n")
 
+
 def display_report(scan_results, severity_filter=None):
     print("\n" + Fore.CYAN + "🔍 SCAN REPORT")
     print(Fore.CYAN + "----------------------------------------")
 
     if not isinstance(scan_results, dict):
-        print(Fore.RED + "Error: scan_results is not in the expected dictionary format.")
+        print(
+            Fore.RED + "Error: scan_results is not in the expected dictionary format."
+        )
         return
 
     vulnerabilities = scan_results.get("vulnerabilities", [])
@@ -110,24 +125,40 @@ def display_report(scan_results, severity_filter=None):
         return
 
     if severity_filter:
-        vulnerabilities = [vuln for vuln in vulnerabilities if vuln.get("severity", "").upper() == severity_filter.upper()]
+        vulnerabilities = [
+            vuln
+            for vuln in vulnerabilities
+            if vuln.get("severity", "").upper() == severity_filter.upper()
+        ]
 
     severity_order = ["CRITICAL", "HIGH", "MEDIUM", "LOW"]
-    vulnerabilities.sort(key=lambda x: severity_order.index(x.get("severity", "LOW").upper()))
+    vulnerabilities.sort(
+        key=lambda x: severity_order.index(x.get("severity", "LOW").upper())
+    )
 
     for vuln in vulnerabilities:
         severity = vuln.get("severity", "").upper()
         color = (
-            Fore.RED if severity == "CRITICAL" else
-            Fore.YELLOW if severity == "HIGH" else
-            Fore.GREEN if severity == "MEDIUM" else
-            Fore.WHITE
+            Fore.RED
+            if severity == "CRITICAL"
+            else (
+                Fore.YELLOW
+                if severity == "HIGH"
+                else Fore.GREEN if severity == "MEDIUM" else Fore.WHITE
+            )
         )
         print(color + f"\n⚠️  Issue: {vuln.get('issue', 'Unknown Issue')}")
         print(Style.BRIGHT + color + f"🔴 Severity: {severity}")
-        print(Fore.WHITE + f"🔎 Description: {vuln.get('description', 'No description provided.')}")
-        print(Fore.WHITE + f"💡 Recommendation: {vuln.get('recommendation', 'No recommendation provided.')}")
+        print(
+            Fore.WHITE
+            + f"🔎 Description: {vuln.get('description', 'No description provided.')}"
+        )
+        print(
+            Fore.WHITE
+            + f"💡 Recommendation: {vuln.get('recommendation', 'No recommendation provided.')}"
+        )
         print(Fore.CYAN + "----------------------------------------")
+
 
 def display_summary(scan_results, severity_filter=None):
     if not scan_results or "vulnerabilities" not in scan_results:
@@ -137,12 +168,22 @@ def display_summary(scan_results, severity_filter=None):
     vulnerabilities = scan_results["vulnerabilities"]
 
     if severity_filter:
-        vulnerabilities = [vuln for vuln in vulnerabilities if vuln["severity"].upper() == severity_filter.upper()]
+        vulnerabilities = [
+            vuln
+            for vuln in vulnerabilities
+            if vuln["severity"].upper() == severity_filter.upper()
+        ]
 
-    high_count = sum(1 for vuln in vulnerabilities if vuln["severity"].upper() == "HIGH")
-    medium_count = sum(1 for vuln in vulnerabilities if vuln["severity"].upper() == "MEDIUM")
+    high_count = sum(
+        1 for vuln in vulnerabilities if vuln["severity"].upper() == "HIGH"
+    )
+    medium_count = sum(
+        1 for vuln in vulnerabilities if vuln["severity"].upper() == "MEDIUM"
+    )
     low_count = sum(1 for vuln in vulnerabilities if vuln["severity"].upper() == "LOW")
-    critical_count = sum(1 for vuln in vulnerabilities if vuln["severity"].upper() == "CRITICAL")
+    critical_count = sum(
+        1 for vuln in vulnerabilities if vuln["severity"].upper() == "CRITICAL"
+    )
 
     print(Fore.CYAN + "\n📊 SUMMARY OF SCAN")
     if severity_filter:
@@ -157,6 +198,7 @@ def display_summary(scan_results, severity_filter=None):
         print(Fore.WHITE + f"🟢 Low Severity Issues: {low_count}")
     print(Fore.CYAN + "----------------------------------------")
 
+
 def run():
     try:
         display_animated_banner()
@@ -169,28 +211,34 @@ def run():
             "3": "sql",
             "4": "tls",
             "5": "directory",
-            "6": "all"
+            "6": "all",
         }
 
         scan_choice = scan_map[scan_type]
         filename = generate_report_filename(scan_choice)
         create_reports_folder()
 
-        args = type("Args", (object,), {
-            "url": url,
-            "all": scan_choice == "all",
-            "headers": scan_choice == "headers" or scan_choice == "all",
-            "xss": scan_choice == "xss" or scan_choice == "all",
-            "sql": scan_choice == "sql" or scan_choice == "all",
-            "tls": scan_choice == "tls" or scan_choice == "all",
-            "directory": scan_choice == "directory" or scan_choice == "all"
-        })
+        args = type(
+            "Args",
+            (object,),
+            {
+                "url": url,
+                "all": scan_choice == "all",
+                "headers": scan_choice == "headers" or scan_choice == "all",
+                "xss": scan_choice == "xss" or scan_choice == "all",
+                "sql": scan_choice == "sql" or scan_choice == "all",
+                "tls": scan_choice == "tls" or scan_choice == "all",
+                "directory": scan_choice == "directory" or scan_choice == "all",
+            },
+        )
 
         display_progress("🔄 Scanning in progress")
         scan_results = scan_website(url, args)
 
         display_report(scan_results)
-        report_generator.generate_json_report(scan_results, os.path.join("reports", filename))
+        report_generator.generate_json_report(
+            scan_results, os.path.join("reports", filename)
+        )
         print(Fore.GREEN + f"\n✅ Scan complete! Report saved as reports/{filename}")
 
         display_summary(scan_results)
@@ -199,6 +247,7 @@ def run():
     except Exception as e:
         print(Fore.RED + f"An unexpected error occurred: {e}")
         print(Fore.YELLOW + "Please check your inputs or try again later.")
+
 
 if __name__ == "__main__":
     run()

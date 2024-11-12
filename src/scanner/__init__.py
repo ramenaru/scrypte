@@ -4,6 +4,7 @@ from .directory_scan import DirectoryScan
 from .sql_injection_scan import SQLInjectionScan
 from .tls_scan import TLSScan
 
+
 def scan_website(url, args):
     vulnerabilities = []
 
