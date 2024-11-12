@@ -96,7 +96,7 @@ def display_progress(message):
         print(Fore.CYAN + ".", end="", flush=True)
     print("\n")
 
-def display_report(scan_results):
+def display_report(scan_results, severity_filter=None):
     print("\n" + Fore.CYAN + "🔍 SCAN REPORT")
     print(Fore.CYAN + "----------------------------------------")
 
@@ -109,12 +109,19 @@ def display_report(scan_results):
         print(Fore.GREEN + "🎉 No vulnerabilities detected! Your site seems secure.")
         return
 
+    if severity_filter:
+        vulnerabilities = [vuln for vuln in vulnerabilities if vuln.get("severity", "").upper() == severity_filter.upper()]
+
+    severity_order = ["CRITICAL", "HIGH", "MEDIUM", "LOW"]
+    vulnerabilities.sort(key=lambda x: severity_order.index(x.get("severity", "LOW").upper()))
+
     for vuln in vulnerabilities:
         severity = vuln.get("severity", "").upper()
         color = (
-            Fore.RED if severity in ["HIGH", "CRITICAL"]
-            else Fore.YELLOW if severity == "MEDIUM"
-            else Fore.GREEN
+            Fore.RED if severity == "CRITICAL" else
+            Fore.YELLOW if severity == "HIGH" else
+            Fore.GREEN if severity == "MEDIUM" else
+            Fore.WHITE
         )
         print(color + f"\n⚠️  Issue: {vuln.get('issue', 'Unknown Issue')}")
         print(Style.BRIGHT + color + f"🔴 Severity: {severity}")
@@ -122,19 +129,32 @@ def display_report(scan_results):
         print(Fore.WHITE + f"💡 Recommendation: {vuln.get('recommendation', 'No recommendation provided.')}")
         print(Fore.CYAN + "----------------------------------------")
 
-def display_summary(scan_results):
+def display_summary(scan_results, severity_filter=None):
     if not scan_results or "vulnerabilities" not in scan_results:
         print(Fore.RED + "No summary available. Check for issues in the scan process.")
         return
 
-    high_count = sum(1 for vuln in scan_results["vulnerabilities"] if vuln["severity"] == "high")
-    medium_count = sum(1 for vuln in scan_results["vulnerabilities"] if vuln["severity"] == "medium")
-    low_count = sum(1 for vuln in scan_results["vulnerabilities"] if vuln["severity"] == "low")
+    vulnerabilities = scan_results["vulnerabilities"]
+
+    if severity_filter:
+        vulnerabilities = [vuln for vuln in vulnerabilities if vuln["severity"].upper() == severity_filter.upper()]
+
+    high_count = sum(1 for vuln in vulnerabilities if vuln["severity"].upper() == "HIGH")
+    medium_count = sum(1 for vuln in vulnerabilities if vuln["severity"].upper() == "MEDIUM")
+    low_count = sum(1 for vuln in vulnerabilities if vuln["severity"].upper() == "LOW")
+    critical_count = sum(1 for vuln in vulnerabilities if vuln["severity"].upper() == "CRITICAL")
 
     print(Fore.CYAN + "\n📊 SUMMARY OF SCAN")
-    print(Fore.RED + f"🔴 High Severity Issues: {high_count}")
-    print(Fore.YELLOW + f"🟡 Medium Severity Issues: {medium_count}")
-    print(Fore.GREEN + f"🟢 Low Severity Issues: {low_count}")
+    if severity_filter:
+        print(Fore.CYAN + f"🔍 Filtered by Severity: {severity_filter.upper()}")
+    if critical_count:
+        print(Fore.RED + f"🔴 Critical Severity Issues: {critical_count}")
+    if high_count:
+        print(Fore.YELLOW + f"🔴 High Severity Issues: {high_count}")
+    if medium_count:
+        print(Fore.GREEN + f"🟡 Medium Severity Issues: {medium_count}")
+    if low_count:
+        print(Fore.WHITE + f"🟢 Low Severity Issues: {low_count}")
     print(Fore.CYAN + "----------------------------------------")
 
 def run():
