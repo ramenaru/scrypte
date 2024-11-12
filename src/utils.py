@@ -1,5 +1,8 @@
-from concurrent.futures import ThreadPoolExecutor
-from urllib.parse import urlparse, parse_qs, urlencode
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from urllib.parse import urlparse, parse_qs, urlencode, urljoin
+from requests.adapters import HTTPAdapter
+from requests.packages.urllib3.util.retry import Retry
+
 import re
 import requests
 import time
@@ -9,7 +12,6 @@ import time
 import ssl
 import socket
 import datetime
-import urljoin
 
 def check_headers(headers):
     vulnerabilities = []
@@ -394,16 +396,32 @@ USER_AGENTS = [
     "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.93 Safari/537.36",
 ]
 
-def directory_enumeration(base_url):
+def create_session():
+    session = requests.Session()
+    retry_strategy = Retry(
+        total=3,
+        backoff_factor=0.3,
+        status_forcelist=[429, 500, 502, 503, 504],
+    )
+    adapter = HTTPAdapter(max_retries=retry_strategy)
+    session.mount("http://", adapter)
+    session.mount("https://", adapter)
+    return session
+
+def directory_enumeration(base_url, custom_paths=None, custom_extensions=None, max_workers=10, delay_range=(0.05, 0.2)):
     vulnerabilities = []
-    
+    session = create_session()
+
+    paths = custom_paths if custom_paths else COMMON_PATHS
+    extensions = custom_extensions if custom_extensions else COMMON_EXTENSIONS
+
     def check_path(path):
         url = urljoin(base_url, path)
         headers = {
             "User-Agent": random.choice(USER_AGENTS)
         }
         try:
-            response = requests.get(url, headers=headers, timeout=5)
+            response = session.get(url, headers=headers, timeout=5, allow_redirects=True)
             if response.status_code == 200:
                 vulnerabilities.append({
                     "issue": "Exposed Directory or File",
@@ -419,14 +437,23 @@ def directory_enumeration(base_url):
                     "recommendation": "Consider blocking access or hiding the directory."
                 })
         except requests.RequestException as e:
-            print(f"Error accessing {url}: {e}")
+            vulnerabilities.append({
+                "issue": "Network Error",
+                "severity": "low",
+                "description": f"Error accessing {url}: {e}",
+                "recommendation": "Ensure the server is accessible and stable."
+            })
 
-    paths_to_check = []
-    for path in COMMON_PATHS:
-        for ext in COMMON_EXTENSIONS:
-            paths_to_check.append(path + ext)
+        time.sleep(random.uniform(*delay_range))
 
-    with ThreadPoolExecutor(max_workers=10) as executor:
-        executor.map(check_path, paths_to_check)
+    paths_to_check = [path + ext for path in paths for ext in extensions]
+
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+        future_to_path = {executor.submit(check_path, path): path for path in paths_to_check}
+        for future in as_completed(future_to_path):
+            try:
+                future.result() 
+            except Exception as exc:
+                print(f"Error with path {future_to_path[future]}: {exc}")
 
     return vulnerabilities

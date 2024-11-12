@@ -17,7 +17,7 @@ def display_animated_banner():
     ███████║╚██████╗██║  ██║   ██║   ██║        ██║   ███████╗
     ╚══════╝ ╚═════╝╚═╝  ╚═╝   ╚═╝   ╚═╝        ╚═╝   ╚══════╝                                              
 
-    Version 1.0.0 by ramenaru
+    Version 1.0.0
     """
     for line in banner_text.splitlines():
         print(Fore.CYAN + line)
@@ -28,7 +28,7 @@ def display_animated_banner():
 def display_credits():
     credits = """
 🌟 Follow ramenaru on GitHub for more projects!
-GitHub: https://github.com/ramenaru
+https://github.com/ramenaru
     """
     print(Fore.GREEN + credits)
 
