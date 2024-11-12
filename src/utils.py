@@ -1,6 +1,7 @@
+from concurrent.futures import ThreadPoolExecutor
+from urllib.parse import urlparse, parse_qs, urlencode
 import re
 import requests
-from urllib.parse import urlparse, parse_qs, urlencode
 import time
 import random
 import string
@@ -8,6 +9,7 @@ import time
 import ssl
 import socket
 import datetime
+import urljoin
 
 def check_headers(headers):
     vulnerabilities = []
@@ -376,3 +378,55 @@ def check_tls_protocol_support(hostname):
             }]
 
     return supported_protocols
+
+COMMON_PATHS = [
+    "admin/", "backup/", "config.php", "login/", "db_backup/", 
+    ".env", "uploads/", "log/", "private/", "temp/", "test/", 
+    "config.json", "phpinfo.php", "web.config", ".git/", 
+    ".svn/", ".htaccess", ".htpasswd", "old/", "temp/", 
+    "backup/", "backups/", "bak/", "logs/", "tmp/"
+]
+
+COMMON_EXTENSIONS = ["", ".php", ".bak", ".old", ".log", ".txt", ".zip", ".tar.gz"]
+USER_AGENTS = [
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.93 Safari/537.36",
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0.3 Safari/605.1.15",
+    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.93 Safari/537.36",
+]
+
+def directory_enumeration(base_url):
+    vulnerabilities = []
+    
+    def check_path(path):
+        url = urljoin(base_url, path)
+        headers = {
+            "User-Agent": random.choice(USER_AGENTS)
+        }
+        try:
+            response = requests.get(url, headers=headers, timeout=5)
+            if response.status_code == 200:
+                vulnerabilities.append({
+                    "issue": "Exposed Directory or File",
+                    "severity": "medium",
+                    "description": f"Accessible resource found at {url}.",
+                    "recommendation": "Restrict access or remove unnecessary resources."
+                })
+            elif response.status_code == 403:
+                vulnerabilities.append({
+                    "issue": "Restricted but Exposed Directory",
+                    "severity": "low",
+                    "description": f"Restricted directory at {url} (403 Forbidden).",
+                    "recommendation": "Consider blocking access or hiding the directory."
+                })
+        except requests.RequestException as e:
+            print(f"Error accessing {url}: {e}")
+
+    paths_to_check = []
+    for path in COMMON_PATHS:
+        for ext in COMMON_EXTENSIONS:
+            paths_to_check.append(path + ext)
+
+    with ThreadPoolExecutor(max_workers=10) as executor:
+        executor.map(check_path, paths_to_check)
+
+    return vulnerabilities

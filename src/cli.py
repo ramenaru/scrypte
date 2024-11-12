@@ -22,7 +22,7 @@ def display_animated_banner():
     for line in banner_text.splitlines():
         print(Fore.CYAN + line)
         time.sleep(0.04)
-    print(Fore.YELLOW + "\n✨ Welcome to Scrypte! Your Web Vulnerability Scanner ✨\n")
+    print(Fore.YELLOW + "\n✨ Welcome to scrypte! Your Web Vulnerability Scanner ✨\n")
     time.sleep(0.5)
 
 def display_credits():
@@ -66,15 +66,17 @@ def prompt_scan_type():
     2. XSS Vulnerability Scan
     3. SQL Injection Scan
     4. TLS/SSL Security Scan
-    5. Run All Scans
+    5. Directory and File Enumeration Scan
+    6. Run All Scans
 """
     print(menu_text)
-    choice = input(Fore.MAGENTA + "Select an option (1-5): ")
+    choice = input(Fore.MAGENTA + "Select an option (1-6): ")
 
-    if choice not in ["1", "2", "3", "4", "5"]:
-        print(Fore.RED + "❌ Invalid selection. Please choose a valid option (1-5).")
+    if choice not in ["1", "2", "3", "4", "5", "6"]:
+        print(Fore.RED + "❌ Invalid selection. Please choose a valid option (1-6).")
         return prompt_scan_type()
     return choice
+
 
 def generate_report_filename(scan_type):
     timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
@@ -146,7 +148,8 @@ def run():
             "2": "xss",
             "3": "sql",
             "4": "tls",
-            "5": "all"
+            "5": "directory",
+            "6": "all"
         }
 
         scan_choice = scan_map[scan_type]
@@ -159,7 +162,8 @@ def run():
             "headers": scan_choice == "headers" or scan_choice == "all",
             "xss": scan_choice == "xss" or scan_choice == "all",
             "sql": scan_choice == "sql" or scan_choice == "all",
-            "tls": scan_choice == "tls" or scan_choice == "all"
+            "tls": scan_choice == "tls" or scan_choice == "all",
+            "directory": scan_choice == "directory" or scan_choice == "all"
         })
 
         display_progress("🔄 Scanning in progress")
