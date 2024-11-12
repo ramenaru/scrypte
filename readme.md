@@ -2,7 +2,7 @@
 
 ![Banners](https://github.com/ramenaru/scrypte/blob/main/misc/images/banner.png) 
 
-**scrypte** is a lightweight tool for detecting web vulnerabilities. This first release focuses on providing essential scanning capabilities in a clean, easy-to-use CLI tool. Perfect for security researchers, developers, and anyone looking to secure their web applications.
+**scrypte** is a lightweight tool for detecting web vulnerabilities. Focuses on providing essential scanning capabilities in a clean, easy-to-use CLI tool. Perfect for security researchers, developers, and anyone looking to secure their web applications.
 
 ---
 ## 🌟 **Current Version**
