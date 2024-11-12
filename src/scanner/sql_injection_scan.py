@@ -8,10 +8,9 @@ from urllib.parse import urlparse, parse_qs
 
 class SQLInjectionScan(BaseScan):
     def __init__(self, url):
-        self.url = url
-        self.vulnerabilities = []
+        super().__init__(url)
 
-    def scan(self):
+    def run(self):
         parsed_url = urlparse(self.url)
         query_params = parse_qs(parsed_url.query)
 

@@ -3,11 +3,9 @@ from src.utils import directory_enumeration
 
 class DirectoryScan(BaseScan):
     def __init__(self, url):
-        self.url = url
-        self.vulnerabilities = []
+        super().__init__(url)
 
-    def scan(self):
-
+    def run(self):
         results = directory_enumeration(self.url)
         self.vulnerabilities.extend(results)
         return self.vulnerabilities

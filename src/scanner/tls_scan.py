@@ -4,10 +4,9 @@ from urllib.parse import urlparse
 
 class TLSScan(BaseScan):
     def __init__(self, url):
-        self.url = url
-        self.vulnerabilities = []
+        super().__init__(url)
 
-    def scan(self):
+    def run(self):
         hostname = urlparse(self.url).hostname
 
         try:
